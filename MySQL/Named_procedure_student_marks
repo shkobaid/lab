@@ -1,0 +1,42 @@
+create table stud_marks (roll int, name varchar(20), total_marks int);
+
+create table result (roll int, name varchar(20), class varchar(30));
+
+insert into stud_marks values (201,"Obaid", 950), (202,"Zaid", 750);
+
+delimiter //
+
+create procedure proc (IN input_roll INT)
+begin
+  declare v_name varchar(30);
+  declare v_class varchar(30);
+  declare v_total_marks int;
+  
+  select name, total_marks into v_name, v_total_marks
+  from stud_marks
+  where input_roll=roll;
+  
+  if v_name IS NULL then
+    select "NAME NULL" as message;
+ 
+  elseif v_total_marks < 0 then
+    select "MARK IS LESS THAN ZERO" as message;
+  
+  else
+    if v_total_marks>900 then
+      set v_class = "DISTINCTION";
+    
+    elseif v_total_marks>800 then
+      set v_class = "Good";
+    
+    else
+      set v_class="Fail";
+    end if;
+  
+  insert into result values  (input_roll, v_name, v_class);
+  end if;
+end; //
+delimiter ;
+
+call proc(202);
+select * from result;
