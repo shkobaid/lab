@@ -1,0 +1,50 @@
+db.createCollection("employees");
+
+db.employees.insertMany([
+  {name:"Obaid",age:20,dept:"Comp"},
+  {name:"Zaid",age:22,dept:"It"},
+  {name:"Mohd",age:17,dept:"Comp"}
+])
+
+db.employees.insertOne({name:"Qadir", age:19, dept:"It"})
+
+db.employees.aggregate(
+  {$count: "Total:"}
+)
+
+db.employees.aggregate(
+  {$match: {name: "Obaid"}}
+)
+
+db.employees.aggregate(
+  {$sort: {name: 1}}
+)
+
+db.employees.aggregate(
+  {$limit: 2}
+)
+
+db.employees.aggregate([
+  {$match: {dept:"Comp"}},
+  {$sort: {name: 1}}
+])
+
+db.employees.aggregate([
+  {
+    $group: {
+      _id: "$dept",
+      count: { $sum: 1}
+    }
+  }
+])
+
+db.employees.distinct("dept")
+
+db.employees.createIndex({dept: 1})
+db.employees.find({dept:"Comp"}).explain()
+
+db.employees.createIndex({dept: 1, age: -1})
+db.employees.find({dept:"Comp"}).explain()
+
+db.employees.createIndex({name: 1},{unique: true})
+db.employees.find({name:"Obaid"}).explain()
