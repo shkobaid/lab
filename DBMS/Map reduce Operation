@@ -1,0 +1,26 @@
+db.createCollection("sales")
+
+db.sales.insertMany([
+  {fruit:"Apple", quantity:5},
+  {fruit:"Mango", quantity:5},
+  {fruit:"Apple", quantity:1},
+  {fruit:"Mango", quantity:5}
+])
+
+var mapFunction= function(){
+  emit(this.fruit,this.quantity);
+}
+
+var reduceFunction= function(fruit, quantity){
+  return Array.sum(quantity)
+}
+
+db.sales.mapReduce(
+  mapFunction,
+  reduceFunction,
+  {
+    out:"total"
+  }
+)
+
+db.total.find()
