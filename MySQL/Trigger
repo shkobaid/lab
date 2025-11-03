@@ -1,0 +1,33 @@
+create table Employee ( id int primary key, name varchar(20), dept varchar(20));
+create table Employee_backup ( id int primary key, name varchar(20), dept varchar(20), operation varchar (10));
+
+insert into Employee values (01, "Obaid", "CE"), (02, "Zaid", "CE");
+
+select * from Employee;
+
+delimiter //
+create trigger before_update
+before update on Employee
+for each row
+begin
+insert into Employee_backup values (OLD.id, OLD.name, OLD.dept, "Update");
+end; //
+
+create trigger before_delete
+before delete on Employee
+for each row
+begin
+insert into Employee_backup values (OLD.id, OLD.name, OLD.dept, "Delete");
+end; //
+
+delimiter ;
+
+update Employee
+set name="Qadir"
+where id=02;
+
+delete from Employee
+where id =01;
+
+select * from Employee;
+select * from Employee_backup;
