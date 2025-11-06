@@ -1,0 +1,32 @@
+import com.mongodb.MongoClient;
+import com.mongodb.client.*;
+import org.bson.Document;
+
+public class mongo {
+    public static void main(String[] args) {
+        MongoClient mongo = new MongoClient("localhost", 27017);
+        MongoDatabase db = mongo.getDatabase("test");
+
+        // Insert one document directly
+        db.getCollection("students").insertOne(new Document("name", "Obaidullah").append("roll", 101));
+        db.getCollection("students").insertOne(new Document("name", "Zaid").append("roll", 102));
+
+        // Update one document: change roll of "Obaidullah" to 999
+        //db.getCollection("students").updateOne(new Document("name", "Obaidullah"),new Document("$set", new Document("roll", 999)));
+
+        // Delete one document: remove "Obaidullah"
+        //db.getCollection("students").deleteOne(new Document("name", "Zaid"));
+
+
+        // Read and print all documents directly
+        /*for (Document doc : db.getCollection("students").find()) {
+            System.out.println(doc.toJson());
+        }*/
+
+        System.out.println("DATA IS: ");
+        for (var d : db.getCollection("students").find()){
+            System.out.println(d);
+        }
+        mongo.close();
+    }
+}
