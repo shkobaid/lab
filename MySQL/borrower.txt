@@ -1,0 +1,52 @@
+DELIMITER //
+
+CREATE PROCEDURE CalculateFine(IN p_Roll_no INT, IN p_NameofBook VARCHAR(255))
+BEGIN
+    -- Declare variables
+    DECLARE v_DateofIssue DATE;
+    DECLARE v_Status VARCHAR(10);
+    DECLARE v_Days INT;
+    DECLARE v_FineAmt INT DEFAULT 0;
+
+    -- Error handler
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+    BEGIN
+        SELECT 'An unexpected error occurred during insertion.' AS Message;
+    END;
+
+    -- Fetch issue date and status
+    SELECT DateofIssue, Status INTO v_DateofIssue, v_Status
+    FROM Borrower
+    WHERE Roll_no = p_Roll_no AND NameofBook = p_NameofBook;
+
+    -- Check status
+    IF v_Status != 'I' THEN
+        SELECT 'Book is not issued or already returned.' AS Message;
+    ELSE
+        SET v_Days = DATEDIFF(CURRENT_DATE, v_DateofIssue);
+
+        IF v_Days < 0 THEN
+            SELECT 'Error: Date of Issue is after current date (invalid).' AS Message;
+        ELSEIF v_Days BETWEEN 15 AND 30 THEN
+            SET v_FineAmt = v_Days * 5;
+        ELSEIF v_Days > 30 THEN
+            SET v_FineAmt = 30 * 5 + (v_Days - 30) * 50;
+        END IF;
+
+        -- Update status
+        UPDATE Borrower
+        SET Status = 'R'
+        WHERE Roll_no = p_Roll_no AND NameofBook = p_NameofBook;
+
+        -- Insert fine if applicable
+        IF v_FineAmt > 0 THEN
+            INSERT INTO Fine (Roll_no, Date, Amt)
+            VALUES (p_Roll_no, CURRENT_DATE, v_FineAmt);
+        END IF;
+
+        SELECT CONCAT('Book returned successfully. Fine amount: Rs ', v_FineAmt) AS Message;
+    END IF;
+END;
+//
+
+DELIMITER ;
