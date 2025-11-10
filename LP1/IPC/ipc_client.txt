@@ -1,0 +1,15 @@
+import socket
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+client_socket.connect(('localhost', 12345))
+
+while True:
+    msg = input("Enter message (type 'exit' to quit): ")
+    if msg.lower() == 'exit':
+        break
+    client_socket.sendall(msg.encode())
+    data = client_socket.recv(1024)
+    print("Echoed:", data.decode())
+
+client_socket.close()
