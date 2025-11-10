@@ -1,0 +1,185 @@
+class InstructionType:
+    IMPERATIVE = 'IS'
+    DECLARATIVE = 'DL'
+    ASSEMBLER_DIRECTIVE = 'AD'
+
+
+class Symbol:
+    def __init__(self, label, address=None):
+        self.label = label
+        self.address = address
+
+
+class Opcode:
+    def __init__(self, mnemonic, opcode, instr_type):
+        self.mnemonic = mnemonic
+        self.opcode = opcode
+        self.type = instr_type
+
+
+class PassOneAssembler:
+    def __init__(self):
+        self.opcode_table = {}
+        self.symbol_table = {}
+        self.literal_table = []     # list of {'literal': "='5'", 'address': None}
+        self.literal_pool = []      # list of lists (literal pools)
+        self.intermediate_code = []
+        self.location_counter = 0
+        self.register_table = {'AREG': 1, 'BREG': 2, 'CREG': 3, 'DREG': 4}
+        self.condition_table = {'LT': 1, 'LE': 2, 'EQ': 3, 'GT': 4, 'GE': 5, 'ANY': 6}
+        self.init_opcode_table()
+
+    def init_opcode_table(self):
+        self.opcode_table = {
+            'START': Opcode('START', 1, InstructionType.ASSEMBLER_DIRECTIVE),
+            'END': Opcode('END', 2, InstructionType.ASSEMBLER_DIRECTIVE),
+            'EQU': Opcode('EQU', 3, InstructionType.ASSEMBLER_DIRECTIVE),
+            'ORIGIN': Opcode('ORIGIN', 4, InstructionType.ASSEMBLER_DIRECTIVE),
+            'LTORG': Opcode('LTORG', 5, InstructionType.ASSEMBLER_DIRECTIVE),
+            'MOVER': Opcode('MOVER', 1, InstructionType.IMPERATIVE),
+            'MOVEM': Opcode('MOVEM', 2, InstructionType.IMPERATIVE),
+            'ADD': Opcode('ADD', 3, InstructionType.IMPERATIVE),
+            'SUB': Opcode('SUB', 4, InstructionType.IMPERATIVE),
+            'MULT': Opcode('MULT', 5, InstructionType.IMPERATIVE),
+            'BC': Opcode('BC', 6, InstructionType.IMPERATIVE),
+            'STOP': Opcode('STOP', 7, InstructionType.IMPERATIVE),
+            'DC': Opcode('DC', 1, InstructionType.DECLARATIVE),
+            'DS': Opcode('DS', 2, InstructionType.DECLARATIVE)
+        }
+
+    def process_line(self, line):
+        line = line.strip().replace('М', 'M')  # fix Cyrillic M
+        if not line or line.startswith(';'):
+            return
+
+        tokens = line.replace(',', ' ').split()
+        if not tokens:
+            return
+
+        label = None
+        mnemonic = None
+
+        # Detect label
+        if tokens[0] not in self.opcode_table:
+            label = tokens[0]
+            tokens = tokens[1:]
+            if label not in self.symbol_table:
+                self.symbol_table[label] = Symbol(label, self.location_counter)
+
+        if not tokens:
+            return
+
+        mnemonic = tokens[0]
+        operands = tokens[1:]
+
+        op = self.opcode_table.get(mnemonic)
+        if not op:
+            print(f"Error: Unknown mnemonic {mnemonic}")
+            return
+
+        operand1 = operands[0] if len(operands) > 0 else None
+        operand2 = operands[1] if len(operands) > 1 else None
+
+        # Handle assembler directives
+        if op.type == InstructionType.ASSEMBLER_DIRECTIVE:
+            if mnemonic == 'START':
+                self.location_counter = int(operand1)
+            elif mnemonic == 'ORIGIN':
+                self.location_counter = self.evaluate_expression(operand1)
+            elif mnemonic == 'EQU' and label:
+                self.symbol_table[label].address = self.evaluate_expression(operand1)
+            elif mnemonic == 'LTORG' or mnemonic == 'END':
+                self.process_literals()
+            # END doesn't increment LC; LTORG assigns literals
+
+        elif op.type == InstructionType.DECLARATIVE:
+            if label:
+                self.symbol_table[label].address = self.location_counter
+            if mnemonic == 'DC':
+                self.location_counter += 1
+            elif mnemonic == 'DS':
+                self.location_counter += int(operand1)
+
+        elif op.type == InstructionType.IMPERATIVE:
+            self.location_counter += 1
+
+        # Build Intermediate Code
+        ic = f"({op.type},{op.opcode})"
+        if operand1:
+            ic += self.format_operand(operand1, first=True)
+        if operand2:
+            ic += self.format_operand(operand2)
+        self.intermediate_code.append(ic)
+
+    def format_operand(self, operand, first=False):
+        operand = operand.strip().rstrip(',')
+        if operand.startswith("='"):
+            # Check if literal already exists
+            for idx, lit in enumerate(self.literal_table):
+                if lit['literal'] == operand:
+                    return f" (L,{idx+1})"
+            # New literal
+            self.literal_table.append({'literal': operand, 'address': None})
+            return f" (L,{len(self.literal_table)})"
+        elif operand in self.register_table:
+            return f" (R,{self.register_table[operand]})"
+        elif operand in self.condition_table:
+            return f" (C,{self.condition_table[operand]})"
+        elif operand.isdigit():
+            return f" (C,{operand})"
+        else:
+            if operand not in self.symbol_table:
+                self.symbol_table[operand] = Symbol(operand)
+            return f" (S,{operand})"
+
+
+    def process_literals(self):
+        """Assign addresses to literals (for LTORG or END)."""
+        new_pool = []
+        for lit in self.literal_table:
+            if lit['address'] is None:
+                lit['address'] = self.location_counter
+                new_pool.append(lit)
+                self.location_counter += 1
+        if new_pool:
+            self.literal_pool.append(new_pool)
+
+    def evaluate_expression(self, expr):
+        if '+' in expr:
+            base, offset = expr.split('+')
+            base_addr = self.symbol_table[base].address if base in self.symbol_table else 0
+            return base_addr + int(offset)
+        try:
+            return int(expr)
+        except ValueError:
+            return self.symbol_table[expr].address if expr in self.symbol_table else 0
+
+    def run(self, filename):
+        with open(filename, 'r', encoding='utf-8') as f:
+            for line in f:
+                self.process_line(line)
+
+        # After full pass, assign literals if END didn’t
+        self.process_literals()
+
+        print("\n=== INTERMEDIATE CODE ===")
+        for code in self.intermediate_code:
+            print(code)
+
+        print("\n=== SYMBOL TABLE ===")
+        for label, sym in self.symbol_table.items():
+            print(f"{label} => {sym.address}")
+
+        print("\n=== LITERAL TABLE ===")
+        for i, lit in enumerate(self.literal_table):
+            print(f"{i+1}\t{lit['literal']}\t{lit['address']}")
+
+        print("\n=== LITERAL POOL ===")
+        for i, pool in enumerate(self.literal_pool):
+            lits = [l['literal'] for l in pool]
+            print(f"Pool {i+1}: {lits}")
+
+
+# Run assembler
+assembler = PassOneAssembler()
+assembler.run("input1.asm")
