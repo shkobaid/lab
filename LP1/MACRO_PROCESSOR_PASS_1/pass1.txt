@@ -1,0 +1,109 @@
+class MacroNameTableEntry:
+    def __init__(self, macro_name, mdt_index, kpdt_index, pnt_index):
+        self.macro_name = macro_name
+        self.mdt_index = mdt_index
+        self.kpdt_index = kpdt_index
+        self.pnt_index = pnt_index
+
+    def __str__(self):
+        return f"{self.macro_name}\t{self.mdt_index}\t{self.kpdt_index}\t{self.pnt_index}"
+
+
+class MacroProcessorPass1:
+    def __init__(self, input_file):
+        self.input_file = input_file
+        self.mdt_ptr = 1
+        self.kpdt_ptr = 1
+        self.pnt_ptr = 1
+
+        self.MNT = []
+        self.MDT = []
+        self.KPDT = []
+        self.PNT = []
+        self.param_index_map = {}
+
+    def process(self):
+        in_macro = False
+
+        with open(self.input_file, "r") as file:
+            lines = [line.strip() for line in file if line.strip()]
+
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+
+            if line.upper() == "MACRO":
+                in_macro = True
+                i += 1
+                if i >= len(lines):
+                    print("⚠️ Unexpected EOF after MACRO")
+                    break
+
+                header_line = lines[i].strip()
+                parts = header_line.split(maxsplit=1)
+                macro_name = parts[0]
+                params = parts[1] if len(parts) > 1 else ""
+
+                current_mdt_index = self.mdt_ptr
+                current_kpdt_index = len(self.KPDT) + 1
+                current_pnt_index = len(self.PNT) + 1
+
+                self.MNT.append(MacroNameTableEntry(macro_name, current_mdt_index, current_kpdt_index, current_pnt_index))
+
+                # Process parameters
+                if params:
+                    for param in params.split(","):
+                        param = param.strip()
+                        if "=" in param:
+                            name, default = param.split("=", 1)
+                            name = name.replace("&", "").strip()
+                            default = default.strip()
+                            self.PNT.append(name)
+                            self.KPDT.append(f"{name}={default}")
+                            self.param_index_map[name] = self.pnt_ptr
+                            self.pnt_ptr += 1
+                            self.kpdt_ptr += 1
+                        else:
+                            name = param.replace("&", "").strip()
+                            self.PNT.append(name)
+                            self.param_index_map[name] = self.pnt_ptr
+                            self.pnt_ptr += 1
+
+                self.MDT.append(header_line)
+                self.mdt_ptr += 1
+
+            elif in_macro:
+                self.MDT.append(line)
+                self.mdt_ptr += 1
+                if line.upper() == "MEND":
+                    in_macro = False
+                    self.param_index_map.clear()
+            i += 1
+
+        self.print_tables()
+
+    def print_tables(self):
+        print("\n=== MACRO NAME TABLE (MNT) ===")
+        print("Name\tMDT Index\tKPDT Index\tPNT Index")
+        for entry in self.MNT:
+            print(entry)
+
+        print("\n=== MACRO DEFINITION TABLE (MDT) ===")
+        print("Index\tDefinition")
+        for i, line in enumerate(self.MDT, start=1):
+            print(f"{i}\t{line}")
+
+        print("\n=== KEYWORD PARAMETER DEFAULT TABLE (KPDT) ===")
+        print("Index\tKeyword Parameter=Default Value")
+        for i, line in enumerate(self.KPDT, start=1):
+            print(f"{i}\t{line}")
+
+        print("\n=== PARAMETER NAME TABLE (PNT) ===")
+        print("Index\tParameter Name")
+        for i, line in enumerate(self.PNT, start=1):
+            print(f"{i}\t{line}")
+
+
+if __name__ == "__main__":
+    processor = MacroProcessorPass1("macro_pass1/input.asm")
+    processor.process()
