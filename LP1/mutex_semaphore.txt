@@ -5,29 +5,30 @@ buffer = []
 MAX_ITEMS = 5
 
 mutex = threading.Lock()
-semaphore = threading.Semaphore(MAX_ITEMS)
+empty = threading.Semaphore(MAX_ITEMS)
 full = threading.Semaphore(0)
 
 def producer(id):
-    for i in range(5):
+    for i in range(1,6):
         time.sleep(1)
+        empty.acquire()
         mutex.acquire()
-        semaphore.acquire()
         buffer.append(i)
         print(f"Producer {id} produced {i}. Buffer size = {len(buffer)}")
         mutex.release()
         full.release()
+        
 
 def consumer(id):
-    for i in range(5):
+    for i in range(1,6):
         time.sleep(1.5)
-        mutex.acquire()
         full.acquire()
+        mutex.acquire()
         item = buffer.pop(0)
         print(f"Consumer {id} consumed {item}. Buffer size = {len(buffer)}")
         mutex.release()
-        semaphore.release()
-
+        empty.release()
+        
 p = threading.Thread(target=producer, args=(1,))
 c = threading.Thread(target=consumer, args=(1,))
 p.start()
