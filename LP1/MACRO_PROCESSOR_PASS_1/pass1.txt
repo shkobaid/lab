@@ -36,7 +36,7 @@ class MacroProcessorPass1:
                 in_macro = True
                 i += 1
                 if i >= len(lines):
-                    print("⚠️ Unexpected EOF after MACRO")
+                    print("Unexpected EOF after MACRO")
                     break
 
                 header_line = lines[i].strip()
@@ -50,7 +50,6 @@ class MacroProcessorPass1:
 
                 self.MNT.append(MacroNameTableEntry(macro_name, current_mdt_index, current_kpdt_index, current_pnt_index))
 
-                # Process parameters
                 if params:
                     for param in params.split(","):
                         param = param.strip()
@@ -83,27 +82,26 @@ class MacroProcessorPass1:
         self.print_tables()
 
     def print_tables(self):
-        print("\n=== MACRO NAME TABLE (MNT) ===")
+        print("\n MACRO NAME TABLE (MNT) ")
         print("Name\tMDT Index\tKPDT Index\tPNT Index")
         for entry in self.MNT:
             print(entry)
 
-        print("\n=== MACRO DEFINITION TABLE (MDT) ===")
+        print("\n MACRO DEFINITION TABLE (MDT) ")
         print("Index\tDefinition")
         for i, line in enumerate(self.MDT, start=1):
             print(f"{i}\t{line}")
 
-        print("\n=== KEYWORD PARAMETER DEFAULT TABLE (KPDT) ===")
+        print("\n KEYWORD PARAMETER DEFAULT TABLE (KPDT) ")
         print("Index\tKeyword Parameter=Default Value")
         for i, line in enumerate(self.KPDT, start=1):
             print(f"{i}\t{line}")
 
-        print("\n=== PARAMETER NAME TABLE (PNT) ===")
+        print("\n PARAMETER NAME TABLE (PNT) ")
         print("Index\tParameter Name")
         for i, line in enumerate(self.PNT, start=1):
             print(f"{i}\t{line}")
 
 
-if __name__ == "__main__":
-    processor = MacroProcessorPass1("macro_pass1/input.asm")
-    processor.process()
+processor = MacroProcessorPass1("macro_pass1/input.asm")
+processor.process()
