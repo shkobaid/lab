@@ -51,20 +51,22 @@ print("LEADER IS", bully(nodes,initiator,alive))
 
 def ring(processes, initiator, alive):
     msg = []
-    i = initiator
+    idx = processes.index(initiator)
 
     while True:
-        if i in alive:
-            msg.append(i)
-        i = (i + 1) % len(processes)
-        if i == initiator:
+        pid = processes[idx]
+        print(f"Process {pid} checked")
+        if pid in alive:
+            msg.append(pid)
+        idx = (idx + 1) % len(processes)
+        if processes[idx] == initiator:
             break
 
     print("Message passed:", msg)
     print("Coordinator:", max(msg))
     
-processes = [0, 1, 2, 3, 4]
-alive = [0, 2, 3, 4]  # Process 1 is dead
+processes = [8,4,1,2]
+alive = [2,4,8]  
 initiator = 2
 
 ring(processes, initiator, alive)
