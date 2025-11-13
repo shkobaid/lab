@@ -10,6 +10,5 @@ MULT CREG, Z
 STOP
 X DS 2
 Y DS 1
-Z DC
-6,
+Z DC, '9'
 END
