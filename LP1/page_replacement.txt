@@ -1,32 +1,29 @@
-def fifo_page_replacement(pages, limit):
+def fifo(pages,limit):
     memory=[]
-    faults=0
+    fault=0
 
     for page in pages:
         if page not in memory:
-            if len(memory) == limit:
+            if len(memory)==limit:
                 memory.pop(0)
+            fault+=1
             memory.append(page)
-            faults += 1
-        print(f"Page: {page} -> {memory}")
-    print(f"\nFIFO Page Faults: {faults}")
+        print(f"Page {page} -> Memory {memory}")
+    print(f"Fault = {fault}")
 
-def lru_page_replacement(pages, limit):
-    memory = []
-    faults = 0
-    
+def lru(pages,limit):
+    memory=[]
+    fault=0
     for page in pages:
-        if page not in memory:
-            if len(memory) == limit:
-                memory.pop(0)  
-            faults += 1
+        if page in memory:
+            memory.remove(page)
         else:
-            memory.remove(page)  
-                   
-        memory.append(page)  
-        print(f"Page {page} -> {memory}")
-
-    print(f"\nLRU Page Faults: {faults}")
+            if len(memory)==limit:
+                memory.pop(0)
+            fault+=1
+        memory.append(page)
+        print(f"Page {page} -> Memory {memory}")
+    print(f"Fault = {fault}")
 
 def optimal_page_replacement(pages, limit):
     memory = []
@@ -38,28 +35,23 @@ def optimal_page_replacement(pages, limit):
             if len(memory) < limit:
                 memory.append(page)
             else:
-                
-                future_uses = []
+                future = []
                 for mem_page in memory:
                     if mem_page in pages[i+1:]:
-                        next_use = pages[i+1:].index(mem_page)
+                        future.append(pages[i+1:].index(mem_page))
                     else:
-                        next_use = float('inf')  
-                    future_uses.append(next_use)
-                
-                index_to_replace = future_uses.index(max(future_uses))
-                memory[index_to_replace] = page
+                        future.append(len(pages) + 1)
+                replace_index = future.index(max(future))
+                memory[replace_index] = page
             faults += 1
-        print(f"Page {page} -> {memory}")
-    
-    print(f"\nOptimal Page Faults: {faults}")
-
+        print(f"Page {page} → Memory: {memory}")
+    print(f"Fault: {faults}")
 
 #pages = [7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2]
-pages=[1,2,1,3,4]
-limit = 4
-fifo_page_replacement(pages, limit)
-
-print("")
-
-lru_page_replacement(pages, limit)
+#pages=[1,2,1,3,4]
+pages = [7, 0, 1, 2, 0, 3, 0, 4, 2, 3]
+limit = 3
+#limit = 4
+fifo(pages,limit)
+lru(pages,limit)
+optimal_page_replacement(pages,limit)
